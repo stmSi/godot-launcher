@@ -64,7 +64,7 @@ jobs:
         run: |
           if [ "$RUNNER_OS" = macOS ]; then
             export PKG_CONFIG_PATH="$(brew --prefix)/lib/pkgconfig:$(brew --prefix openssl@3)/lib/pkgconfig:$(brew --prefix curl)/lib/pkgconfig:$(brew --prefix libarchive)/lib/pkgconfig"
-            export CMAKE_PREFIX_PATH="$(brew --prefix);$(brew --prefix openssl@3);$(brew --prefix curl);$(brew --prefix libarchive)"
+            export CMAKE_PREFIX_PATH="$(brew --prefix):$(brew --prefix openssl@3):$(brew --prefix curl):$(brew --prefix libarchive)"
           fi
           cmake --preset release \
             -DARCFLOW_FRAMEWORK_SOURCE_DIR="$PWD/deps/af-framework" \

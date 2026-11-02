@@ -5,6 +5,7 @@ import argparse
 import json
 import os
 import pathlib
+import platform as host_platform
 import re
 import shutil
 import subprocess
@@ -16,6 +17,12 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 def package(platform, arch, source, destination):
+    machine = host_platform.machine().lower()
+    machine = {"amd64": "x86_64", "aarch64": "arm64"}.get(machine, machine)
+    if machine != arch:
+        raise ValueError(
+            f"Package architecture {arch} does not match build host {machine}"
+        )
     name = f"godot-launcher-{platform}-{arch}"
     source = source.resolve()
     executable = {

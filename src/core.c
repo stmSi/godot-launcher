@@ -48,7 +48,27 @@ static bool dirs(const char *path) {
     if (strlen(path) >= sizeof(tmp))
         return false;
     strcpy(tmp, path);
-    for (char *p = tmp + 1; *p; ++p)
+    char *start = tmp + 1;
+#ifdef _WIN32
+    for (char *p = tmp; *p; ++p)
+        if (*p == '\\')
+            *p = '/';
+    size_t length = strlen(tmp);
+    while (length > 1 && tmp[length - 1] == '/' && !(length == 3 && tmp[1] == ':'))
+        tmp[--length] = 0;
+    /* A drive name is not a directory that can be created. For UNC paths the
+     * server and share must already exist; create only directories below them. */
+    if (length >= 3 && isalpha((unsigned char)tmp[0]) && tmp[1] == ':' && tmp[2] == '/') {
+        start = tmp + 3;
+    } else if (tmp[0] == '/' && tmp[1] == '/') {
+        char *server_end = strchr(tmp + 2, '/');
+        char *share_end = server_end ? strchr(server_end + 1, '/') : NULL;
+        if (!share_end)
+            return exists(tmp);
+        start = share_end + 1;
+    }
+#endif
+    for (char *p = start; *p; ++p)
         if (*p == '/' || *p == '\\') {
             char c = *p;
             *p = 0;
