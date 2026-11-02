@@ -1,5 +1,6 @@
 #include "app.h"
 #include "af/ui/draw.h"
+#include "godot_icon.h"
 #include "render.h"
 #include <SDL3/SDL.h>
 #include <math.h>
@@ -80,12 +81,7 @@ static void icon(App *a, int kind, float x, float y, float s, unsigned fill, int
 #define L(x1, y1, x2, y2)                                                                          \
     line(a, x + (x1) * u, y + (y1) * u, x + (x2) * u, y + (y2) * u, fill, t, layer)
     if (kind == 0) { /* engine */
-        surface(a, (Rect){x + 3 * u, y + 7 * u, 18 * u, 14 * u}, fill, 4 * u, layer);
-        surface(a, (Rect){x + 5 * u, y + 3 * u, 4 * u, 8 * u}, fill, 1 * u, layer);
-        surface(a, (Rect){x + 15 * u, y + 3 * u, 4 * u, 8 * u}, fill, 1 * u, layer);
-        circle(a, x + 8 * u, y + 12 * u, 2 * u, SIDE, layer + 1);
-        circle(a, x + 16 * u, y + 12 * u, 2 * u, SIDE, layer + 1);
-        line(a, x + 8 * u, y + 17 * u, x + 16 * u, y + 17 * u, SIDE, t, layer + 1);
+        gl_godot_icon(&a->ui, x, y, s, layer);
     } else if (kind == 1) {
         L(3, 7, 10, 7);
         L(10, 7, 12, 10);

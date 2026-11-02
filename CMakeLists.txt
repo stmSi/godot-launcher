@@ -38,7 +38,7 @@ target_link_libraries(launcher_core PUBLIC CURL::libcurl LibArchive::LibArchive 
 if(NOT WIN32)
     target_compile_definitions(launcher_core PRIVATE _POSIX_C_SOURCE=200809L)
 endif()
-add_executable(godot-launcher src/main.c src/app.c src/render.c)
+add_executable(godot-launcher src/main.c src/app.c src/render.c src/godot_icon.c)
 target_link_libraries(godot-launcher PRIVATE launcher_core af::framework)
 if(WIN32)
     enable_language(RC)

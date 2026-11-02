@@ -11,6 +11,8 @@ Sources from godotengine/godot commit 95c0fa5fe8a019adc29d074c16b64469b04571f7:
 - godot.png: misc/logo/icon.png, unchanged.
 - godot.icns: misc/dist/macos_tools.app/Contents/Resources/GodotLG.icns, unchanged.
 - icon.bmp and ../packaging/launcher.ico: size/format conversions of godot.png.
+- ../src/godot_icon.c: the original SVG paths and colors used throughout the UI;
+  quadratic curves are converted to mathematically equivalent cubic curves.
 
 Upstream artwork and attribution:
 https://github.com/godotengine/godot/tree/95c0fa5fe8a019adc29d074c16b64469b04571f7/misc/logo
