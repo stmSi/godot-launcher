@@ -1,0 +1,4 @@
+include(BundleUtilities)
+fixup_bundle("${CMAKE_INSTALL_PREFIX}/godot-launcher.app" "" "/opt/homebrew/lib;/usr/local/lib")
+execute_process(COMMAND /usr/bin/codesign --force --deep --sign -
+    "${CMAKE_INSTALL_PREFIX}/godot-launcher.app" COMMAND_ERROR_IS_FATAL ANY)

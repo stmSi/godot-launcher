@@ -1,0 +1,201 @@
+name: Build, test, and release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref == 'refs/heads/main' }}
+
+env:
+  CMAKE_BUILD_PARALLEL_LEVEL: 3
+
+jobs:
+  unix:
+    name: ${{ matrix.platform }} / ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            platform: linux
+            arch: x86_64
+          - runner: macos-15
+            platform: macos
+            arch: arm64
+          - runner: macos-15-intel
+            platform: macos
+            arch: x86_64
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build pkg-config \
+            libcurl4-openssl-dev libarchive-dev libssl-dev libjson-c-dev \
+            libfreetype6-dev libharfbuzz-dev libx11-dev libxext-dev \
+            libxcursor-dev libxfixes-dev libxi-dev libxrandr-dev libxss-dev \
+            libxtst-dev libxkbcommon-dev glslc spirv-tools \
+            libvulkan1 mesa-vulkan-drivers xvfb xauth
+      - name: Install macOS dependencies
+        if: runner.os == 'macOS'
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+        run: brew install ninja curl libarchive openssl@3 json-c freetype harfbuzz pkgconf
+      - name: Cache source dependencies
+        uses: actions/cache@v6
+        with:
+          path: deps
+          key: sources-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/bootstrap.py') }}
+      - name: Fetch pinned source dependencies
+        run: python3 tools/bootstrap.py
+      - name: Configure release
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = macOS ]; then
+            export PKG_CONFIG_PATH="$(brew --prefix)/lib/pkgconfig:$(brew --prefix openssl@3)/lib/pkgconfig:$(brew --prefix curl)/lib/pkgconfig:$(brew --prefix libarchive)/lib/pkgconfig"
+            export CMAKE_PREFIX_PATH="$(brew --prefix);$(brew --prefix openssl@3);$(brew --prefix curl);$(brew --prefix libarchive)"
+          fi
+          cmake --preset release \
+            -DARCFLOW_FRAMEWORK_SOURCE_DIR="$PWD/deps/af-framework" \
+            -DAF_FRAMEWORK_DEPENDENCY_ROOT="$PWD/deps/third_party"
+      - name: Build release
+        run: cmake --build --preset release
+      - name: Run core tests
+        run: ctest --test-dir build/release --output-on-failure
+      - name: Install release
+        run: cmake --install build/release --prefix "$PWD/out"
+      - name: Smoke-test installed Linux UI
+        if: runner.os == 'Linux'
+        env:
+          SDL_VIDEODRIVER: x11
+        run: |
+          xvfb-run -a -s '-screen 0 1280x900x24' \
+            ./out/bin/godot-launcher --offline \
+            --data-dir "$RUNNER_TEMP/launcher-smoke" --frames 4
+      - name: Smoke-test installed macOS bundle
+        if: runner.os == 'macOS'
+        run: |
+          ./out/godot-launcher.app/Contents/MacOS/godot-launcher --help
+          codesign --verify --deep --strict out/godot-launcher.app
+      - name: Package release
+        env:
+          PACKAGE_PLATFORM: ${{ matrix.platform }}
+          PACKAGE_ARCH: ${{ matrix.arch }}
+        run: python3 tools/package-release.py --platform "$PACKAGE_PLATFORM" --arch "$PACKAGE_ARCH"
+      - name: Upload release package
+        uses: actions/upload-artifact@v7
+        with:
+          name: package-${{ matrix.platform }}-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+  windows:
+    name: windows / x86_64
+    runs-on: windows-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-python
+            mingw-w64-ucrt-x86_64-curl
+            mingw-w64-ucrt-x86_64-libarchive
+            mingw-w64-ucrt-x86_64-openssl
+            mingw-w64-ucrt-x86_64-json-c
+            mingw-w64-ucrt-x86_64-freetype
+            mingw-w64-ucrt-x86_64-harfbuzz
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-shaderc
+            mingw-w64-ucrt-x86_64-spirv-tools
+      - name: Cache source dependencies
+        uses: actions/cache@v6
+        with:
+          path: deps
+          key: sources-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/bootstrap.py') }}
+      - name: Fetch pinned source dependencies
+        run: python tools/bootstrap.py
+      - name: Configure release
+        run: |
+          cmake --preset release \
+            -DARCFLOW_FRAMEWORK_SOURCE_DIR="$PWD/deps/af-framework" \
+            -DAF_FRAMEWORK_DEPENDENCY_ROOT="$PWD/deps/third_party"
+      - name: Build release
+        run: cmake --build --preset release
+      - name: Run core tests
+        run: ctest --test-dir build/release --output-on-failure
+      - name: Install release
+        run: cmake --install build/release --prefix "$PWD/out"
+      - name: Collect runtime DLLs
+        run: python tools/collect-windows-dlls.py out/bin/godot-launcher.exe
+      - name: Smoke-test packaged executable
+        run: |
+          python - <<'PY'
+          import os
+          import pathlib
+          import subprocess
+          executable = pathlib.Path('out/bin/godot-launcher.exe').resolve()
+          env = os.environ.copy()
+          env['PATH'] = os.path.join(env['SYSTEMROOT'], 'System32')
+          subprocess.run([str(executable), '--help'], env=env, check=True, timeout=30)
+          PY
+      - name: Package release
+        run: python tools/package-release.py --platform windows --arch x86_64
+      - name: Upload release package
+        uses: actions/upload-artifact@v7
+        with:
+          name: package-windows-x86_64
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Publish GitHub Release
+    needs: [unix, windows]
+    if: >-
+      github.event_name != 'pull_request' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: package-*
+          path: dist
+          merge-multiple: true
+      - name: Verify packages and generate checksums
+        working-directory: dist
+        run: |
+          test -f godot-launcher-linux-x86_64.tar.gz
+          test -f godot-launcher-windows-x86_64.zip
+          test -f godot-launcher-macos-arm64.zip
+          test -f godot-launcher-macos-x86_64.zip
+          sha256sum godot-launcher-* > SHA256SUMS.txt
+      - name: Publish built packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: python3 tools/publish-release.py

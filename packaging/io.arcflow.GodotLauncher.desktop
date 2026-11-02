@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Godot Launcher
+Comment=Download, update, and launch Godot engines and projects
+Exec=godot-launcher
+Icon=io.arcflow.GodotLauncher
+Terminal=false
+Categories=Development;IDE;
+Keywords=Godot;Game;Engine;Arcflow;
