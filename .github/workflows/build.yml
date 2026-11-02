@@ -85,9 +85,7 @@ jobs:
             --data-dir "$RUNNER_TEMP/launcher-smoke" --frames 4
       - name: Smoke-test installed macOS bundle
         if: runner.os == 'macOS'
-        run: |
-          ./out/godot-launcher.app/Contents/MacOS/godot-launcher --help
-          codesign --verify --deep --strict out/godot-launcher.app
+        run: python3 tools/smoke-macos.py out/godot-launcher.app
       - name: Package release
         env:
           PACKAGE_PLATFORM: ${{ matrix.platform }}

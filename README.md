@@ -167,3 +167,5 @@ screenshot under `build/`. All temporary project/engine fixtures are removed aft
 Official release metadata: [Godot builds](https://github.com/godotengine/godot-builds/releases),
 [GitHub Releases API](https://docs.github.com/en/rest/releases/releases).
 Bundled Open Sans fonts are licensed under [OFL 1.1](assets/fonts/OFL.txt).
+Godot icon artwork and the macOS distribution icon retain their upstream
+[attribution and licenses](assets/README.md).

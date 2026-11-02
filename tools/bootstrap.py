@@ -11,7 +11,7 @@ SOURCES = [
     (
         "af-framework",
         "https://github.com/stmSi/af-framework.git",
-        "3c873cf6bb57e7e76ab9f15085d476321ef0f4c7",
+        "7ccb2eaf313970d2e39f635158270af644fe6d80",
     ),
     ("third_party/SDL", "https://github.com/libsdl-org/SDL.git", "release-3.4.12"),
     (

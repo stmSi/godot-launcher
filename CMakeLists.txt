@@ -48,8 +48,12 @@ if(WIN32)
 endif()
 if(APPLE)
     target_link_libraries(godot-launcher PRIVATE "-framework CoreGraphics")
+    target_sources(godot-launcher PRIVATE assets/godot.icns)
+    set_source_files_properties(assets/godot.icns PROPERTIES
+        MACOSX_PACKAGE_LOCATION Resources)
     set_target_properties(godot-launcher PROPERTIES
         MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_ICON_FILE godot.icns
         MACOSX_BUNDLE_GUI_IDENTIFIER io.arcflow.GodotLauncher
         MACOSX_BUNDLE_BUNDLE_NAME "Godot Launcher"
         MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
