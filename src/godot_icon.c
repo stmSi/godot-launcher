@@ -146,4 +146,3 @@ void gl_godot_icon(AfUiContext *ui, float x, float y, float size, int layer) {
     eye(ui, x, y, 307, 532, 60, scale, dark, layer);
     eye(ui, x, y, 717, 532, 60, scale, dark, layer);
 }
-
